@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Facebook,
@@ -8,9 +9,42 @@ import {
   Linkedin,
   Mail,
   Coffee,
+  CheckCircle,
 } from "lucide-react";
 
 export default function Footer() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess(false);
+
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.ok) {
+        setSuccess(true);
+        setEmail("");
+      } else {
+        const data = await res.json();
+        setError(data.error || "Something went wrong. Try again.");
+      }
+    } catch (err) {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <footer className="bg-futuristic text-white relative overflow-hidden pt-20 pb-10 px-6 md:px-20">
       {/* Decorative glowing shapes */}
@@ -58,7 +92,7 @@ export default function Footer() {
           <h3 className="text-xl font-semibold mb-2">Contact</h3>
           <ul className="space-y-2 text-gray-300">
             <li className="flex items-center gap-2">
-              <Mail className="w-5 h-5" /> contact@hoob.africa
+              <Mail className="w-5 h-5" /> orvnworldofficial@gmail.com
             </li>
             <li>+234 800 123 4567</li>
             <li>Lagos, Nigeria</li>
@@ -77,19 +111,31 @@ export default function Footer() {
           <p className="text-gray-300">
             Stay updated on new opportunities, challenges, and courses. ORA will even help personalize your journey.
           </p>
-          <form className="flex flex-col sm:flex-row gap-3 mt-4">
+          <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 mt-4">
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email"
-              className="px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+              required
+              className="flex-1 px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
             />
             <motion.button
               whileHover={{ scale: 1.05 }}
-              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl font-semibold text-white shadow-lg"
+              disabled={loading}
+              type="submit"
+              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl font-semibold text-white shadow-lg disabled:opacity-50"
             >
-              Subscribe
+              {loading ? "Subscribing..." : "Subscribe"}
             </motion.button>
           </form>
+
+          {success && (
+            <p className="flex items-center gap-2 text-green-400 mt-2 text-sm">
+              <CheckCircle className="w-4 h-4" /> You’re subscribed! Check your inbox.
+            </p>
+          )}
+          {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
         </div>
       </div>
 

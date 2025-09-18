@@ -1,98 +1,145 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin } from "lucide-react";
 
 export default function Contact() {
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE}/api/contact`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus("success");
+        setFormData({ name: "", email: "", message: "" });
+      } else {
+        setStatus(data.error || "error");
+      }
+    } catch (err) {
+      setStatus("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="bg-futuristic min-h-screen text-white font-sans py-24 px-6 md:px-20">
-      {/* Hero */}
-      <motion.div
-        initial={{ opacity: 0, y: -40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1 }}
-        className="text-center max-w-4xl mx-auto mb-16"
-      >
-        <h1 className="text-5xl md:text-6xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
-          Get in Touch
-        </h1>
-        <p className="mt-6 text-lg md:text-xl text-gray-300">
-          Have questions, ideas, or just want to say hi? HOOB is here to connect. 
-          Our community and AI assistant ORA are always ready to guide you. Reach out, and let’s build together.
-        </p>
-      </motion.div>
+    <section className="relative bg-futuristic from-gray-900 to-black text-white py-20">
+      <div className="container mx-auto px-6 lg:px-12">
+        <motion.h2
+          className="text-4xl font-bold text-center mb-12"
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          Contact Us
+        </motion.h2>
 
-      {/* Contact Info */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="grid md:grid-cols-3 gap-8 mb-16"
-      >
-        <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-8 flex flex-col items-center text-center hover:scale-105 transform transition duration-300">
-          <Mail className="w-10 h-10 text-purple-400 mb-4" />
-          <h3 className="text-xl font-bold mb-2">Email Us</h3>
-          <p className="text-gray-300 text-sm">support@hoob.africa</p>
-        </div>
-
-        <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-8 flex flex-col items-center text-center hover:scale-105 transform transition duration-300">
-          <Phone className="w-10 h-10 text-cyan-400 mb-4" />
-          <h3 className="text-xl font-bold mb-2">Call Us</h3>
-          <p className="text-gray-300 text-sm">+234 800 123 4567</p>
-        </div>
-
-        <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-8 flex flex-col items-center text-center hover:scale-105 transform transition duration-300">
-          <MapPin className="w-10 h-10 text-pink-400 mb-4" />
-          <h3 className="text-xl font-bold mb-2">Visit Us</h3>
-          <p className="text-gray-300 text-sm">Lagos, Nigeria - HOOB HQ</p>
-        </div>
-      </motion.div>
-
-      {/* Contact Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
-        className="backdrop-blur-xl bg-white/10 rounded-3xl p-10 max-w-3xl mx-auto shadow-lg"
-      >
-        <h2 className="text-3xl font-bold text-center mb-6 text-cyan-400">
-          Send Us a Message
-        </h2>
-        <form className="space-y-6">
-          <div className="flex flex-col">
-            <label className="text-gray-300 mb-2">Name</label>
-            <input
-              type="text"
-              placeholder="Your name"
-              className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none border border-white/20"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-gray-300 mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none border border-white/20"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-gray-300 mb-2">Message</label>
-            <textarea
-              rows="6"
-              placeholder="Your message..."
-              className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none border border-white/20"
-            ></textarea>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            type="submit"
-            className="w-full py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold rounded-full shadow-lg"
+        <div className="grid md:grid-cols-2 gap-12">
+          {/* Contact Info */}
+          <motion.div
+            className="space-y-6"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
           >
-            Send Message
-          </motion.button>
-        </form>
-      </motion.div>
-    </div>
+            <p className="text-lg text-gray-300">
+              Have questions or want to collaborate? Get in touch with us below.
+            </p>
+            <div className="flex items-center space-x-4">
+              <Mail className="text-blue-400" />
+              <span>orvnworldofficial@gmail.com</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Phone className="text-green-400" />
+              <span>+234 000 000 0000</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <MapPin className="text-red-400" />
+              <span>Lagos, Nigeria</span>
+            </div>
+          </motion.div>
+
+          {/* Contact Form */}
+          <motion.form
+            onSubmit={handleSubmit}
+            className="bg-gray-800 p-8 rounded-2xl shadow-lg space-y-6"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div>
+              <label className="block mb-2 text-gray-300">Name</label>
+              <input
+                type="text"
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full p-3 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-gray-300">Email</label>
+              <input
+                type="email"
+                name="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full p-3 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-gray-300">Message</label>
+              <textarea
+                name="message"
+                rows="5"
+                required
+                value={formData.message}
+                onChange={handleChange}
+                className="w-full p-3 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              ></textarea>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors font-semibold"
+            >
+              {loading ? "Sending..." : "Send Message"}
+            </button>
+
+            {status === "success" && (
+              <p className="text-green-400 mt-2">Message sent successfully!</p>
+            )}
+            {status && status !== "success" && (
+              <p className="text-red-400 mt-2">
+                {typeof status === "string" ? status : "Something went wrong. Try again."}
+              </p>
+            )}
+          </motion.form>
+        </div>
+      </div>
+    </section>
   );
 }
