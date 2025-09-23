@@ -10,6 +10,9 @@ import Services from "./pages/Services";
 import Contact from "./pages/Contact";
 import SignUp from "./pages/auth/SignUp"
 import SignIn from "./pages/auth/SignIn"
+import ForgotPassword from "./pages/auth/ForgotPassword"
+import ResetPassword from "./pages/auth/ResetPassword"
+import VerifyCode from "./pages/auth/VerifyCode";
 
 // (Later you can add SignIn, Dashboard, etc.)
 
@@ -29,6 +32,9 @@ function App() {
             <Route path="/contact" element= {<Contact/>} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/signin" element={<SignIn/>} />
+            <Route path="/forgot-password" element={<ForgotPassword/>} />
+            <Route path="/reset-password" element={<ResetPassword/>}/>
+            <Route path="/verify-code" element={<VerifyCode/>}/>
           </Routes>
         </main>
 

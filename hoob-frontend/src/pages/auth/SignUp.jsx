@@ -1,30 +1,71 @@
-"use client";
-
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Lock, User, CheckCircle } from "lucide-react";
+import { Mail, Lock, User, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function SignUp() {
-  const [role, setRole] = useState("student"); // student or SME
+  const navigate = useNavigate();
+  const [role, setRole] = useState("student");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState("");
   const [feedback, setFeedback] = useState("");
 
-  const handleSendCode = (e) => {
+  const API_URL = import.meta.env.VITE_API_BASE;
+
+  const handleSendCode = async (e) => {
     e.preventDefault();
-    // TODO: integrate backend to send code
-    setCodeSent(true);
-    setFeedback("A verification code has been sent to your email.");
+    setFeedback("");
+    try {
+      const res = await fetch(`${API_URL}/auth/send-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, password, role }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCodeSent(true);
+        setFeedback(data.message);
+      } else {
+        setFeedback(data.error || "Failed to send code.");
+      }
+    } catch (err) {
+      setFeedback("Something went wrong. Please try again.");
+    }
   };
 
-  const handleVerifyCode = (e) => {
+  const handleVerifyCode = async (e) => {
     e.preventDefault();
-    // TODO: integrate backend to verify code
-    setFeedback("Email verified! You can now complete your registration.");
+    setFeedback("");
+
+    if (password !== confirmPassword) {
+      setFeedback("Passwords do not match.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/auth/verify-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code, name, password, role }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedback(data.message);
+        setTimeout(() => {
+          navigate("/signin");
+        }, 1500);
+      } else {
+        setFeedback(data.error || "Verification failed.");
+      }
+    } catch (err) {
+      setFeedback("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -39,8 +80,7 @@ export default function SignUp() {
           Sign Up to HOOB
         </h1>
         <p className="text-gray-300 text-sm mb-6 text-center">
-          Join Africa’s House of Builders. Learn, build, earn, and connect with
-          creators across the continent.
+          Join Africa’s House of Builders. Learn, build, earn, and connect with creators across the continent.
         </p>
 
         {/* Role Selection */}
@@ -62,7 +102,7 @@ export default function SignUp() {
 
         {!codeSent ? (
           <form onSubmit={handleSendCode} className="space-y-4">
-            {/* Name */}
+            {/* Name Input */}
             <div className="relative">
               <User className="absolute left-3 top-3 w-5 h-5 text-gray-300" />
               <input
@@ -75,7 +115,7 @@ export default function SignUp() {
               />
             </div>
 
-            {/* Email */}
+            {/* Email Input */}
             <div className="relative">
               <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-300" />
               <input
@@ -88,30 +128,43 @@ export default function SignUp() {
               />
             </div>
 
-            {/* Password */}
+            {/* Password Inputs */}
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-300" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                className="w-full pl-10 pr-10 py-3 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-gray-300"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
 
-            {/* Confirm Password */}
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-300" />
               <input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                className="w-full pl-10 pr-10 py-3 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-3 text-gray-300"
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
 
             <motion.button
@@ -124,6 +177,7 @@ export default function SignUp() {
           </form>
         ) : (
           <form onSubmit={handleVerifyCode} className="space-y-4">
+            {/* Verification Code Input */}
             <div className="relative">
               <CheckCircle className="absolute left-3 top-3 w-5 h-5 text-gray-300" />
               <input

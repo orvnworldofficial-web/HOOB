@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Target,
@@ -11,6 +11,9 @@ import {
   Workflow,
   Globe,
   Sparkles,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function About() {
@@ -24,43 +27,70 @@ export default function About() {
     visible: { opacity: 1, x: 0 },
   };
 
-  // Waitlist form state
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState("idle");
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setStatus("loading");
-
-  try {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE}/api/waitlist`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email }),
-});
-
-    if (res.ok) {
-      setStatus("success");
-      setEmail("");
-    } else {
-      // Try to grab backend error message if available
-      try {
-        const data = await res.json();
-        setStatus(data?.message || "error");
-      } catch {
-        setStatus("error");
-      }
+    e.preventDefault();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setToastMessage("Please enter a valid email address.");
+      setToastType("warning");
+      setShowToast(true);
+      return;
     }
-  } catch (err) {
-    console.error("Error submitting waitlist:", err);
-    setStatus("error");
-  }
-};
-
+    setLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+      if (res.ok) {
+        setToastMessage("🎉 You’re on the list!");
+        setToastType("success");
+        setShowToast(true);
+        setEmail("");
+      } else {
+        if (res.status === 400 && data?.message?.toLowerCase().includes("already")) {
+          setToastMessage("You’re already on the waitlist!");
+          setToastType("warning");
+        } else {
+          setToastMessage(data?.message || "Email already registered or invalid.");
+          setToastType("error");
+        }
+        setShowToast(true);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error("Error submitting waitlist:", err);
+      setToastMessage("Error connecting to server.");
+      setToastType("error");
+      setShowToast(true);
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-futuristic min-h-screen text-white font-sans">
-      {/* Hero / Why HOOB */}
       <section className="text-center py-24 px-6">
         <motion.h1
           initial={{ opacity: 0, y: -40 }}
@@ -82,73 +112,68 @@ export default function About() {
           </span>
         </motion.p>
       </section>
-
-      {/* The Gaps Section */}
-<section className="px-6 md:px-20 py-20">
-  {/* Header */}
-  <motion.div
-    initial={{ opacity: 0, y: -30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.8 }}
-    className="text-center mb-16"
-  >
-    <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
-      The Gaps We’re Here to Fix
-    </h2>
-    <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">
-      Before HOOB, these challenges held back creators, freelancers, SMEs, and students. 
-      We’ve seen them firsthand—and we’re building to close these gaps.
-    </p>
-  </motion.div>
-
-  {/* Struggles List */}
-  <div className="space-y-16">
-    {[
-      {
-        title: "SMEs stuck in endless DMs",
-        text: "Small businesses waste countless hours replying to scattered DMs, chasing confirmations, and juggling customers across different apps. Instead of scaling, they get stuck in busywork.",
-        icon: <Workflow className="w-16 h-16 text-purple-400" />,
-      },
-      {
-        title: "Creators without stability",
-        text: "Creators grind on multiple platforms, posting daily, chasing trends—yet most still lack consistent income. Their creativity fuels the internet, but the system doesn’t reward them fairly.",
-        icon: <Rocket className="w-16 h-16 text-pink-400" />,
-      },
-      {
-        title: "Freelancers chasing payments",
-        text: "Freelancers often wait weeks—or even months—for payment after finishing jobs. Late invoices and unreliable platforms create a cycle of uncertainty that kills momentum.",
-        icon: <Target className="w-16 h-16 text-cyan-400" />,
-      },
-      {
-        title: "Students left without opportunities",
-        text: "Millions of students complete online courses, but with no real projects, networks, or pathways to jobs. Learning feels like a dead end, instead of a launchpad to growth.",
-        icon: <Lightbulb className="w-16 h-16 text-yellow-400" />,
-      },
-    ].map((item, i) => (
-      <motion.div
-        key={i}
-        variants={i % 2 === 0 ? fadeInLeft : fadeInRight}
-        initial="hidden"
-        whileInView="visible"
-        transition={{ duration: 0.8 }}
-        className={`flex flex-col md:flex-row ${
-          i % 2 !== 0 ? "md:flex-row-reverse" : ""
-        } items-center gap-10`}
-      >
-        <div className="flex-shrink-0">{item.icon}</div>
-        <div className="backdrop-blur-lg bg-white/5 p-8 rounded-2xl shadow-lg max-w-2xl">
-          <h3 className="text-xl font-semibold text-white mb-3">
-            {item.title}
-          </h3>
-          <p className="text-gray-300 text-lg leading-relaxed">{item.text}</p>
+      <section className="px-6 md:px-20 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
+            The Gaps We’re Here to Fix
+          </h2>
+          <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">
+            Before HOOB, these challenges held back creators, freelancers, SMEs,
+            and students. We’ve seen them firsthand—and we’re building to close
+            these gaps.
+          </p>
+        </motion.div>
+        <div className="space-y-16">
+          {[
+            {
+              title: "SMEs stuck in endless DMs",
+              text: "Small businesses waste countless hours replying to scattered DMs, chasing confirmations, and juggling customers across different apps. Instead of scaling, they get stuck in busywork.",
+              icon: <Workflow className="w-16 h-16 text-purple-400" />,
+            },
+            {
+              title: "Creators without stability",
+              text: "Creators grind on multiple platforms, posting daily, chasing trends—yet most still lack consistent income. Their creativity fuels the internet, but the system doesn’t reward them fairly.",
+              icon: <Rocket className="w-16 h-16 text-pink-400" />,
+            },
+            {
+              title: "Freelancers chasing payments",
+              text: "Freelancers often wait weeks—or even months—for payment after finishing jobs. Late invoices and unreliable platforms create a cycle of uncertainty that kills momentum.",
+              icon: <Target className="w-16 h-16 text-cyan-400" />,
+            },
+            {
+              title: "Students left without opportunities",
+              text: "Millions of students complete online courses, but with no real projects, networks, or pathways to jobs. Learning feels like a dead end, instead of a launchpad to growth.",
+              icon: <Lightbulb className="w-16 h-16 text-yellow-400" />,
+            },
+          ].map((item, i) => (
+            <motion.div
+              key={i}
+              variants={i % 2 === 0 ? fadeInLeft : fadeInRight}
+              initial="hidden"
+              whileInView="visible"
+              transition={{ duration: 0.8 }}
+              className={`flex flex-col md:flex-row ${
+                i % 2 !== 0 ? "md:flex-row-reverse" : ""
+              } items-center gap-10`}
+            >
+              <div className="flex-shrink-0">{item.icon}</div>
+              <div className="backdrop-blur-lg bg-white/5 p-8 rounded-2xl shadow-lg max-w-2xl">
+                <h3 className="text-xl font-semibold text-white mb-3">
+                  {item.title}
+                </h3>
+                <p className="text-gray-300 text-lg leading-relaxed">
+                  {item.text}
+                </p>
+              </div>
+            </motion.div>
+          ))}
         </div>
-      </motion.div>
-    ))}
-  </div>
-</section>
-
-
-      {/* Who We Are */}
+      </section>
       <section className="px-6 md:px-20 py-20 grid md:grid-cols-2 gap-10 items-center">
         <motion.div
           variants={fadeInLeft}
@@ -156,9 +181,7 @@ export default function About() {
           whileInView="visible"
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-4xl font-bold text-cyan-400 mb-6">
-            Who We Are
-          </h2>
+          <h2 className="text-4xl font-bold text-cyan-400 mb-6">Who We Are</h2>
           <p className="text-lg text-gray-300 leading-relaxed">
             HOOB was built to fix this system. We’re not building{" "}
             <span className="font-semibold text-purple-400">
@@ -171,7 +194,9 @@ export default function About() {
             <span className="font-semibold text-cyan-400">systems</span> — HOOB
             is about the systems that keep your business, brand, and career
             moving. <br />
-            <span className="text-pink-400 font-bold">HOOB is your Growth Buddy.</span>
+            <span className="text-pink-400 font-bold">
+              HOOB is your Growth Buddy.
+            </span>
           </p>
         </motion.div>
         <motion.div
@@ -184,8 +209,6 @@ export default function About() {
           <Globe className="w-40 h-40 text-cyan-400 opacity-80" />
         </motion.div>
       </section>
-
-      {/* Vision */}
       <section className="px-6 md:px-20 py-20 grid md:grid-cols-2 gap-10 items-center">
         <motion.div
           variants={fadeInLeft}
@@ -210,8 +233,6 @@ export default function About() {
           </p>
         </motion.div>
       </section>
-
-      {/* Mission */}
       <section className="px-6 md:px-20 py-20 grid md:grid-cols-2 gap-10 items-center">
         <motion.div
           variants={fadeInLeft}
@@ -221,8 +242,8 @@ export default function About() {
         >
           <h2 className="text-3xl font-bold mb-4">Our Mission</h2>
           <p className="text-lg text-gray-300 leading-relaxed">
-            Empowering talent and businesses with tools to learn, collaborate,
-            and earn in the digital economy.
+            Empowering talent and businesses with tools to learn, collaborate, and
+            earn in the digital economy.
           </p>
         </motion.div>
         <motion.div
@@ -235,8 +256,6 @@ export default function About() {
           <Lightbulb className="w-40 h-40 text-yellow-400 opacity-80" />
         </motion.div>
       </section>
-
-      {/* Core Values */}
       <section className="px-6 md:px-20 py-20">
         <h2 className="text-4xl font-bold text-center mb-12">
           Our Core Values
@@ -271,8 +290,6 @@ export default function About() {
           ))}
         </div>
       </section>
-
-      {/* ORA */}
       <section className="px-6 md:px-20 py-20 grid md:grid-cols-2 gap-10 items-center">
         <motion.div
           variants={fadeInLeft}
@@ -282,10 +299,10 @@ export default function About() {
         >
           <h2 className="text-3xl font-bold text-cyan-400 mb-4">ORA</h2>
           <p className="text-lg text-gray-300 leading-relaxed">
-            ORA is your personal AI guide within HOOB. From recommending courses
-            to nudging you about opportunities, ORA personalizes your journey.
-            Think of her as your futuristic study buddy, mentor, and assistant —
-            all in one.
+            ORA is your personal AI guide within HOOB. From recommending courses to
+            nudging you about opportunities, ORA personalizes your journey. Think
+            of her as your futuristic study buddy, mentor, and assistant — all in
+            one.
           </p>
         </motion.div>
         <motion.div
@@ -298,8 +315,6 @@ export default function About() {
           <Sparkles className="w-40 h-40 text-cyan-400 opacity-80" />
         </motion.div>
       </section>
-
-      {/* E.A.R.N */}
       <section className="px-6 md:px-20 py-20 grid md:grid-cols-2 gap-10 items-center">
         <motion.div
           variants={fadeInLeft}
@@ -319,15 +334,13 @@ export default function About() {
         >
           <h2 className="text-3xl font-bold text-purple-400 mb-4">E.A.R.N</h2>
           <p className="text-lg text-gray-300 leading-relaxed">
-            E.A.R.N is the autonomous engine of HOOB — seamlessly integrating
-            jobs, wallets, courses, and communities. It’s the invisible layer
-            ensuring that everything just works, while multiplying your growth
+            E.A.R.N is the autonomous engine of HOOB — seamlessly integrating jobs,
+            wallets, courses, and communities. It’s the invisible layer ensuring
+            that everything just works, while multiplying your growth
             opportunities.
           </p>
         </motion.div>
       </section>
-
-      {/* Closing CTA */}
       <section className="px-6 md:px-20 py-20 text-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -339,11 +352,9 @@ export default function About() {
             Building the Future Together
           </h2>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
-            HOOB is more than a project — it’s a movement. Join us as we build
-            the most advanced hub for learning, work, and growth.
+            HOOB is more than a project — it’s a movement. Join us as we build the
+            most advanced hub for learning, work, and growth.
           </p>
-
-          {/* Waitlist Form */}
           <form
             onSubmit={handleSubmit}
             className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
@@ -359,26 +370,51 @@ export default function About() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               type="submit"
-              disabled={status === "loading"}
-              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white rounded-full font-semibold shadow-lg disabled:opacity-50"
+              disabled={loading || showToast}
+              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white rounded-full font-semibold shadow-lg disabled:opacity-50 disabled:animate-pulse"
             >
-              {status === "loading" ? "Joining..." : "Join Waitlist"}
+              {loading ? "Adding to waitlist..." : "Join Waitlist"}
             </motion.button>
           </form>
-
-          {status === "success" && (
-            <p className="text-green-400 mt-4">🎉 You’re on the list!</p>
-          )}
-          {status === "error" && (
-            <p className="text-red-400 mt-4">Something went wrong. Try again.</p>
-          )}
-          {status === "idle" && (
-            <p className="text-sm text-gray-400 mt-4">
-              Be the first to experience HOOB. No spam, just future updates.
-            </p>
-          )}
+          <p className="text-sm text-gray-400 mt-4">
+            Be the first to experience HOOB. No spam, just future updates.
+          </p>
         </motion.div>
       </section>
+      {showToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className={`fixed top-4 right-4 max-w-xs w-full p-4 rounded-lg shadow-neon backdrop-blur-md bg-glass border border-glass z-50 ${
+            toastType === "success"
+              ? "bg-green-500/20 text-green-100"
+              : toastType === "error"
+              ? "bg-red-500/20 text-red-100"
+              : "bg-yellow-500/20 text-yellow-100"
+          }`}
+        >
+          <div className="flex items-center">
+            {toastType === "success" && (
+              <CheckCircle className="w-6 h-6 mr-3 text-green-400" />
+            )}
+            {toastType === "error" && (
+              <AlertCircle className="w-6 h-6 mr-3 text-red-400" />
+            )}
+            {toastType === "warning" && (
+              <AlertTriangle className="w-6 h-6 mr-3 text-yellow-400" />
+            )}
+            <p className="text-sm font-sans flex-1">{toastMessage}</p>
+            <button
+              onClick={() => setShowToast(false)}
+              className="ml-3 text-neutral hover:text-primary-400 transition"
+            >
+              ✕
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

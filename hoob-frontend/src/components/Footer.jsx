@@ -25,7 +25,7 @@ export default function Footer() {
     setSuccess(false);
 
     try {
-      const res = await fetch("/api/newsletter", {
+      const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

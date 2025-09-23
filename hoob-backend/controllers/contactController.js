@@ -1,23 +1,22 @@
-import { addToAudience } from "../utils/mailChimp.js";
+import { sendEmail } from "../utils/mailer.js";
+import Contact from "../models/Contact.js";
 
+// POST /contact
 export const submitContact = async (req, res) => {
-  const { name, email, message } = req.body;
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: "Name, email and message are required" });
-  }
-
   try {
-    const result = await addToAudience(
-      email,
-      { FNAME: name },
-      ["contact"]
+    const { name, email, message } = req.body;
+    if (!email || !message) return res.status(400).json({ error: "Email and message are required" });
+
+    await Contact.create({ name, email, message });
+
+    await sendEmail(
+      process.env.EMAIL_USER,
+      `New Contact Message from ${name || "Anonymous"}`,
+      message,
+      `<p>${message}</p><p>From: ${name || "Anonymous"} (${email})</p>`
     );
 
-    // Optionally save message separately
-    result.contact.message = message;
-    await result.contact.save();
-
-    res.status(200).json({ message: "Contact submitted", result });
+    res.json({ message: "Message sent successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

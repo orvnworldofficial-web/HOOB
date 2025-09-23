@@ -1,5 +1,6 @@
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Rocket,
@@ -12,41 +13,87 @@ import {
   Globe,
   ArrowRight,
   CheckCircle,
+  AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function Home() {
   const [email, setEmail] = useState("");
-  const [waitlistCount, setWaitlistCount] = useState(1245); // placeholder, dynamic later
-  const [showModal, setShowModal] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const [loading, setLoading] = useState(false);
 
- const handleWaitlistSubmit = async (e) => {
-  e.preventDefault();
-  if (!email) return;
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
-  try {
-    // Save email & subscribe via backend (MongoDB + Mailchimp)
-    const res = await fetch(`${import.meta.env.VITE_API_BASE}/api/waitlist`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email }),
-});
+  const handleWaitlistSubmit = async (e) => {
+    e.preventDefault();
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      setToastMessage("Please enter an email before submitting");
+      setToastType("error");
+      setShowToast(true);
+      return;
+    }
+    if (!emailRegex.test(email)) {
+      setToastMessage("Please enter a valid email address.");
+      setToastType("warning");
+      setShowToast(true);
+      return;
+    }
 
-    if (!res.ok) throw new Error("Failed to join waitlist");
+    setLoading(true);
+    try {
+      console.log("Submitting email:", email);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
 
-    // Update UI
-    setWaitlistCount((prev) => prev + 1);
-    setEmail("");
-    setShowModal(true);
-  } catch (err) {
-    console.error("Error submitting waitlist:", err);
-  }
-};
+      if (!res.ok) {
+        if (res.status === 400 && data?.message?.toLowerCase().includes("already")) {
+          setToastMessage("You’re already on the waitlist!");
+          setToastType("warning");
+        } else {
+          setToastMessage(data?.message || "Email already registered or invalid.");
+          setToastType("error");
+        }
+        setShowToast(true);
+        setLoading(false);
+        return;
+      }
 
+      setToastMessage("🎉 You're on the waitlist!");
+      setToastType("success");
+      setShowToast(true);
+      setEmail("");
+      setLoading(false);
+    } catch (error) {
+      console.error("Error submitting waitlist:", error);
+      setToastMessage("Something went wrong. Please try again later.");
+      setToastType("error");
+      setShowToast(true);
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-futuristic min-h-screen text-white font-sans">
-      {/* Hero Section */}
       <section className="relative flex flex-col items-center justify-center text-center py-28 px-6">
         <motion.h1
           initial={{ opacity: 0, y: -40 }}
@@ -67,8 +114,6 @@ export default function Home() {
           <span className="text-purple-400 font-semibold">E.A.R.N</span>,
           helping you learn, earn, automate, and grow—all in one place.
         </motion.p>
-
-        {/* Waitlist Form */}
         <motion.form
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -86,25 +131,13 @@ export default function Home() {
           />
           <button
             type="submit"
-            className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full font-semibold shadow-lg hover:scale-105 transform transition"
-            title="Be the first to experience HOOB at launch"
+            disabled={loading || showToast}
+            className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full font-semibold shadow-lg hover:scale-105 transform transition disabled:opacity-50 disabled:animate-pulse"
           >
-            🚀 Join Waitlist
+            {loading ? "Adding to waitlist..." : "🚀 Join Waitlist"}
           </button>
         </motion.form>
-
-        {/* Waitlist Counter */}
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.7 }}
-          className="mt-4 text-cyan-400 font-semibold"
-        >
-          🎉 Already {waitlistCount.toLocaleString()} people joined the waitlist!
-        </motion.p>
       </section>
-
-      {/* About Section */}
       <section className="px-6 md:px-20 py-16">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -129,13 +162,10 @@ export default function Home() {
             href="/services"
             className="mt-6 inline-flex items-center px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full font-semibold shadow-lg"
           >
-            💡 Explore the Ecosystem{" "}
-            <ArrowRight className="ml-2 w-5 h-5" />
+            💡 Explore the Ecosystem <ArrowRight className="ml-2 w-5 h-5" />
           </motion.a>
         </motion.div>
       </section>
-
-      {/* ORA + E.A.R.N Section */}
       <section className="px-6 md:px-20 py-16 grid md:grid-cols-2 gap-10">
         <motion.div
           initial={{ opacity: 0, x: -60 }}
@@ -153,7 +183,6 @@ export default function Home() {
             your journey.
           </p>
         </motion.div>
-
         <motion.div
           initial={{ opacity: 0, x: 60 }}
           whileInView={{ opacity: 1, x: 0 }}
@@ -172,8 +201,6 @@ export default function Home() {
           </p>
         </motion.div>
       </section>
-
-      {/* Who HOOB is For */}
       <section className="px-6 md:px-20 py-20 text-center">
         <h2 className="text-4xl font-bold text-white mb-12">Who is HOOB For?</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
@@ -214,89 +241,124 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      {/* Call to Action */}
-<section className="px-6 md:px-20 py-20 text-center">
-  <motion.div
-    initial={{ opacity: 0, scale: 0.95 }}
-    whileInView={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.7 }}
-    className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl p-12"
-  >
-    <h2 className="text-4xl md:text-5xl font-bold mb-6">
-      Don’t Wait for Growth. Build It.
-    </h2>
-    <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
-      Be part of the future of work, learning, and earning. Join thousands
-      already signing up for HOOB early access.
-    </p>
-
-    {/* Waitlist Form */}
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const email = e.target.email.value;
-
-        try {
-          const res = await fetch(`${import.meta.env.VITE_API_BASE}/api/waitlist`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email }),
-});
-
-          if (res.ok) {
-            alert("🎉 You’re on the waitlist!");
-            e.target.reset();
-          } else {
-            alert("⚠️ Something went wrong. Try again.");
-          }
-        } catch (err) {
-          alert("⚠️ Error connecting to server.");
-        }
-      }}
-      className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto"
-    >
-      <input
-        type="email"
-        name="email"
-        placeholder="Enter your email"
-        required
-        className="flex-1 px-4 py-3 rounded-full bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-      />
-      <button
-        type="submit"
-        className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white rounded-full font-semibold shadow-lg hover:scale-105 transition-transform"
-      >
-        🚀 Join the Waitlist
-      </button>
-    </form>
-  </motion.div>
-</section>
-
-
-      {/* Success Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-10 max-w-md text-center text-white"
+      <section className="px-6 md:px-20 py-20 text-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7 }}
+          className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl p-12"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Don’t Wait for Growth. Build It.
+          </h2>
+          <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
+            Be part of the future of work, learning, and earning. Join thousands
+            already signing up for HOOB early access.
+          </p>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const email = e.target.email.value;
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (!emailRegex.test(email)) {
+                setToastMessage("Please enter a valid email address.");
+                setToastType("warning");
+                setShowToast(true);
+                return;
+              }
+              setLoading(true);
+              try {
+                const res = await fetch(
+                  `${import.meta.env.VITE_API_BASE}/waitlist`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email }),
+                  }
+                );
+                let data;
+                try {
+                  data = await res.json();
+                } catch {
+                  data = {};
+                }
+                if (res.ok) {
+                  setToastMessage("🎉 You’re on the waitlist!");
+                  setToastType("success");
+                  setShowToast(true);
+                  e.target.reset();
+                } else {
+                  if (res.status === 400 && data?.message?.toLowerCase().includes("already")) {
+                    setToastMessage("You’re already on the waitlist!");
+                    setToastType("warning");
+                  } else {
+                    setToastMessage(
+                      data?.message || "Email already registered or invalid."
+                    );
+                    setToastType("error");
+                  }
+                  setShowToast(true);
+                }
+                setLoading(false);
+              } catch (err) {
+                setToastMessage("Error connecting to server.");
+                setToastType("error");
+                setShowToast(true);
+                setLoading(false);
+              }
+            }}
+            className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto"
           >
-            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold mb-2">Success!</h3>
-            <p className="text-gray-200 mb-4">
-              You’ve joined the HOOB waitlist. Check your email for confirmation
-              and updates.
-            </p>
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              required
+              className="flex-1 px-4 py-3 rounded-full bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            />
             <button
-              onClick={() => setShowModal(false)}
-              className="mt-2 px-6 py-2 bg-cyan-500 rounded-full font-semibold hover:bg-cyan-400 transition"
+              type="submit"
+              disabled={loading || showToast}
+              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white rounded-full font-semibold shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:animate-pulse"
             >
-              Close
+              {loading ? "Adding to waitlist..." : "🚀 Join the Waitlist"}
             </button>
-          </motion.div>
-        </div>
+          </form>
+        </motion.div>
+      </section>
+      {showToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className={`fixed top-4 right-4 max-w-xs w-full p-4 rounded-lg shadow-neon backdrop-blur-md bg-glass border border-glass z-50 ${
+            toastType === "success"
+              ? "bg-green-500/20 text-green-100"
+              : toastType === "error"
+              ? "bg-red-500/20 text-red-100"
+              : "bg-yellow-500/20 text-yellow-100"
+          }`}
+        >
+          <div className="flex items-center">
+            {toastType === "success" && (
+              <CheckCircle className="w-6 h-6 mr-3 text-green-400" />
+            )}
+            {toastType === "error" && (
+              <AlertCircle className="w-6 h-6 mr-3 text-red-400" />
+            )}
+            {toastType === "warning" && (
+              <AlertTriangle className="w-6 h-6 mr-3 text-yellow-400" />
+            )}
+            <p className="text-sm font-sans flex-1">{toastMessage}</p>
+            <button
+              onClick={() => setShowToast(false)}
+              className="ml-3 text-neutral hover:text-primary-400 transition"
+            >
+              ✕
+            </button>
+          </div>
+        </motion.div>
       )}
     </div>
   );
