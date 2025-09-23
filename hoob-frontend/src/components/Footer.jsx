@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Facebook,
@@ -10,37 +10,80 @@ import {
   Mail,
   Coffee,
   CheckCircle,
+  AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleSubscribe = async (e) => {
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
+  const handleWaitlistSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess(false);
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      setToastMessage("Please enter an email before submitting");
+      setToastType("error");
+      setShowToast(true);
+      return;
+    }
+    if (!emailRegex.test(email)) {
+      setToastMessage("Please enter a valid email address.");
+      setToastType("warning");
+      setShowToast(true);
+      return;
+    }
+
+    setLoading(true);
     try {
-      const res = await fetch("/api/waitlist", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/waitlist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
-      if (res.ok) {
-        setSuccess(true);
-        setEmail("");
-      } else {
-        const data = await res.json();
-        setError(data.error || "Something went wrong. Try again.");
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
       }
-    } catch (err) {
-      setError("Network error. Please try again.");
-    } finally {
+
+      if (!res.ok) {
+        if (res.status === 400 && data?.message?.toLowerCase().includes("already")) {
+          setToastMessage("You’re already on the waitlist!");
+          setToastType("warning");
+        } else {
+          setToastMessage(data?.message || "Email already registered or invalid.");
+          setToastType("error");
+        }
+        setShowToast(true);
+        setLoading(false);
+        return;
+      }
+
+      setToastMessage("🎉 You're on the waitlist!");
+      setToastType("success");
+      setShowToast(true);
+      setEmail("");
+      setLoading(false);
+    } catch (error) {
+      console.error("Error submitting waitlist:", error);
+      setToastMessage("Something went wrong. Please try again later.");
+      setToastType("error");
+      setShowToast(true);
       setLoading(false);
     }
   };
@@ -105,43 +148,72 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Newsletter */}
+        {/* Waitlist Form */}
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold mb-2">Join Our Movement</h3>
+          <h3 className="text-xl font-semibold mb-2">Join Our Waitlist</h3>
           <p className="text-gray-300">
-            Stay updated on new opportunities, challenges, and courses. ORA will even help personalize your journey.
+            Be the first to access HOOB’s ecosystem. Get early updates and personalized insights from ORA.
           </p>
-          <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 mt-4">
+          <form onSubmit={handleWaitlistSubmit} className="flex flex-col sm:flex-row gap-3 mt-4">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your email"
+              placeholder="Enter your email"
               required
-              className="flex-1 px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+              className="flex-1 px-4 py-3 rounded-full bg-white/10 backdrop-blur-md text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
             />
             <motion.button
               whileHover={{ scale: 1.05 }}
-              disabled={loading}
+              disabled={loading || showToast}
               type="submit"
-              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl font-semibold text-white shadow-lg disabled:opacity-50"
+              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full font-semibold text-white shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:animate-pulse"
             >
-              {loading ? "Subscribing..." : "Subscribe"}
+              {loading ? "Adding to waitlist..." : "🚀 Join Waitlist"}
             </motion.button>
           </form>
-
-          {success && (
-            <p className="flex items-center gap-2 text-green-400 mt-2 text-sm">
-              <CheckCircle className="w-4 h-4" /> You’re subscribed! Check your inbox.
-            </p>
-          )}
-          {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
         </div>
       </div>
 
+      {/* Toast Notification */}
+      {showToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className={`fixed top-4 right-4 max-w-xs w-full p-4 rounded-lg shadow-neon backdrop-blur-md bg-glass border border-glass z-50 ${
+            toastType === "success"
+              ? "bg-green-500/20 text-green-100"
+              : toastType === "error"
+              ? "bg-red-500/20 text-red-100"
+              : "bg-yellow-500/20 text-yellow-100"
+          }`}
+        >
+          <div className="flex items-center">
+            {toastType === "success" && (
+              <CheckCircle className="w-6 h-6 mr-3 text-green-400" />
+            )}
+            {toastType === "error" && (
+              <AlertCircle className="w-6 h-6 mr-3 text-red-400" />
+            )}
+            {toastType === "warning" && (
+              <AlertTriangle className="w-6 h-6 mr-3 text-yellow-400" />
+            )}
+            <p className="text-sm font-sans flex-1">{toastMessage}</p>
+            <button
+              onClick={() => setShowToast(false)}
+              className="ml-3 text-neutral hover:text-primary-400 transition"
+            >
+              ✕
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Bottom Bar */}
       <div className="mt-16 border-t border-white/20 pt-6 text-center text-gray-400 text-sm">
-        © {new Date().getFullYear()} HOOB. All rights reserved. Built with passion, AI, and futuristic vibes.
+        © {new Date().getFullYear()} HOOB. All rights reserved. Powered by ORVN
       </div>
     </footer>
   );
