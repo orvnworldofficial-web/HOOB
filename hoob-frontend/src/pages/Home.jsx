@@ -301,7 +301,7 @@ export default function Home() {
                 }
                 setLoading(false);
               } catch (err) {
-                setToastMessage("Error connecting to server.");
+                setToastMessage("Error connecting to server please check your internet connection.");
                 setToastType("error");
                 setShowToast(true);
                 setLoading(false);

@@ -21,6 +21,13 @@ export default function SignUp() {
   const handleSendCode = async (e) => {
     e.preventDefault();
     setFeedback("");
+
+    // ✅ Guard: prevent submission if passwords don’t match
+    if (password !== confirmPassword) {
+      setFeedback("Passwords do not match.");
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/auth/send-code`, {
         method: "POST",
@@ -166,6 +173,13 @@ export default function SignUp() {
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+
+            {/* ✅ Inline feedback */}
+            {confirmPassword && password !== confirmPassword && (
+              <p className="text-red-400 text-sm mt-1">
+                Passwords do not match
+              </p>
+            )}
 
             <motion.button
               whileHover={{ scale: 1.05 }}
