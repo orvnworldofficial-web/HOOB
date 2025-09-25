@@ -37,6 +37,7 @@ export default function Navbar() {
         </div>
 
         {/* Desktop Call to Action Buttons */}
+        {/*
         <div className="hidden md:flex items-center gap-4">
           <Link
             to="/signin"
@@ -53,6 +54,7 @@ export default function Navbar() {
             Sign Up
           </Link>
         </div>
+        */}
 
         {/* Mobile Menu Button */}
         <button
@@ -79,6 +81,7 @@ export default function Navbar() {
           <Link to="/contact" onClick={toggleMenu} className="flex items-center gap-2 px-3 py-2 hover:bg-white/20 rounded-md transition">
             <Phone size={18} /> Contact
           </Link>
+          {/*
           <div className="border-t border-white/20 pt-3 mt-3 space-y-3">
             <Link
               to="/signin"
@@ -95,6 +98,7 @@ export default function Navbar() {
               <UserPlus size={18} /> Sign Up
             </Link>
           </div>
+          */}
         </div>
       )}
     </nav>
